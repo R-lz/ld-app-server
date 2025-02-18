@@ -2,6 +2,7 @@ from fastapi import FastAPI, Depends, HTTPException, status, File, UploadFile, F
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
 from typing import Optional
 import os
@@ -9,19 +10,34 @@ from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from passlib.context import CryptContext
 from . import models, database
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.requests import Request
 
+# 创建主应用
 app = FastAPI(title="App Version Manager")
 
+# 创建 API 路由器
+api_router = FastAPI(title="API Router")
+
+# 配置 CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://localhost:8923", "http://localhost:8080", "http://localhost", 
+                  "http://38.55.193.234:8080", "http://38.55.193.234:8923"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # 配置静态文件和模板
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
+# app.mount("/frontend", StaticFiles(directory="frontend/dist"), name="frontend")
 templates = Jinja2Templates(directory="templates")
 
 # 密码加密和JWT配置
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
-SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
+SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
@@ -56,6 +72,11 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if user is None:
         raise credentials_exception
     return user
+
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 
 @app.post("/token")
@@ -142,6 +163,25 @@ async def check_version(
         }
 
     return {"has_update": False}
+
+
+@app.get("/")
+async def serve_frontend():
+    return FileResponse("frontend/dist/index.html")
+
+
+@app.get("/api/versions")
+async def list_versions(db: Session = Depends(database.get_db)):
+    versions = db.query(models.AppVersion).all()
+    return versions
+
+
+@app.get("/download/{filename}")
+async def download_file(filename: str):
+    file_path = os.path.join(UPLOAD_DIR, filename)
+    if not os.path.exists(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(file_path)
 
 # 初始化数据库
 

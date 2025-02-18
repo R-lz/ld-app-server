@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* 2196F3 转换为 RGB: 33, 150, 243 */
+  /* 64B5F6 转换为 RGB: 100, 181, 246 */
+  --color-primary: 33 150 243;
+  --color-primary-light: 100 181 246;
+  --color-primary-dark: 21 101 192;  /* 稍深的蓝色用于hover效果 */
+}
+
+@layer base {
+  body {
+    @apply bg-gray-50;
+  }
+}
+
+@layer components {
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-colors duration-200 inline-flex items-center justify-center;
+  }
+  
+  .btn-primary {
+    @apply btn bg-gradient-to-r from-primary to-primary-light text-white hover:from-primary-dark hover:to-primary;
+  }
+  
+  .btn-secondary {
+    @apply btn border-2 border-primary text-primary hover:bg-gradient-to-r hover:from-primary hover:to-primary-light hover:text-white focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+
+  .input {
+    @apply block w-full rounded-lg border-gray-300 shadow-sm focus:border-primary focus:ring-primary;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-md p-6 animate-fade-in;
+  }
+}
+
+/* 动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* 加载动画 */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
