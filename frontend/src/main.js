@@ -6,12 +6,11 @@ import router from './router'
 import App from './App.vue'
 import './style.css'
 import { useAuthStore } from './stores/auth'
+import { useThemeStore } from './stores/theme'
 
 // Configure axios
-// 在开发环境使用完整的URL，在生产环境使用相对路径
 axios.defaults.baseURL = import.meta.env.DEV ? 'http://localhost:8923' : ''
 
-// 从 localStorage 恢复 token 并设置到 axios 头部
 const token = localStorage.getItem('token')
 if (token) {
   axios.defaults.headers.common['Authorization'] = `Bearer ${token}`

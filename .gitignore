@@ -4,3 +4,14 @@ dist/
 *.spec
 __pycache__/
 *.log
+frontend/dist/
+frontend/node_modules/
+frontend/.env
+frontend/.vscode/
+frontend/nginx.conf
+uploads/
+
+*.env
+
+
+

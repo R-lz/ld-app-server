@@ -13,6 +13,9 @@ RUN pip install --no-cache-dir -r requirements.txt && \
 COPY . .
 RUN mkdir -p app/static templates uploads
 
+# 设置 Python 路径
+ENV PYTHONPATH=/app
+
 # 创建启动脚本
 RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'echo "Waiting for database to be ready..."' >> /app/start.sh && \
@@ -21,6 +24,7 @@ RUN echo '#!/bin/bash' > /app/start.sh && \
     echo 'done' >> /app/start.sh && \
     echo 'echo "Database is ready!"' >> /app/start.sh && \
     echo 'sleep 2' >> /app/start.sh && \
+    echo 'alembic upgrade head' >> /app/start.sh && \
     echo 'python create_admin.py' >> /app/start.sh && \
     echo 'uvicorn app.main:app --host 0.0.0.0 --port 8000' >> /app/start.sh && \
     chmod +x /app/start.sh

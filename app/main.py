@@ -14,7 +14,7 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.requests import Request
 
 # 创建主应用
-app = FastAPI(title="App Version Manager")
+app = FastAPI(title="App Manager")
 
 # 创建 API 路由器
 api_router = FastAPI(title="API Router")
@@ -22,8 +22,7 @@ api_router = FastAPI(title="API Router")
 # 配置 CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://localhost:8923", "http://localhost:8080", "http://localhost", 
-                  "http://38.55.193.234:8080", "http://38.55.193.234:8923"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -39,7 +38,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
 SECRET_KEY = os.getenv("SECRET_KEY", "")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 1440  # 24 hours
 
 # 创建上传目录
 UPLOAD_DIR = "uploads"
@@ -148,10 +147,9 @@ async def check_version(
         .filter(models.AppVersion.platform == platform)\
         .order_by(models.AppVersion.version_code.desc())\
         .first()
-
     if not latest_version:
         return {"has_update": False}
-
+    
     if latest_version.version_code > current_version_code:
         return {
             "has_update": True,
@@ -183,7 +181,76 @@ async def download_file(filename: str):
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(file_path)
 
-# 初始化数据库
+
+# 配置管理API
+@app.get("/api/configs")
+async def list_configs(db: Session = Depends(database.get_db)):
+    configs = db.query(models.AppConfig).all()
+    return configs
+
+@app.get("/api/configs/{key}")
+async def get_config(key: str, db: Session = Depends(database.get_db)):
+    config = db.query(models.AppConfig).filter(models.AppConfig.key == key).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+    return config
+
+@app.post("/api/configs")
+async def create_config(
+    key: str = Form(...),
+    value: str = Form(...),
+    description: str = Form(...),
+    type: str = Form(...),
+    visible: bool = Form(True),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    existing_config = db.query(models.AppConfig).filter(models.AppConfig.key == key).first()
+    if existing_config:
+        raise HTTPException(status_code=400, detail="Configuration key already exists")
+    
+    new_config = models.AppConfig(
+        key=key,
+        value=value,
+        description=description,
+        type=type,
+        created_by=current_user.id,
+        visible=visible
+    )
+    db.add(new_config)
+    db.commit()
+    db.refresh(new_config)
+    return new_config
+
+@app.put("/api/configs/{key}")
+async def update_config(
+    key: str,
+    value: str = Form(...),
+    description: str = Form(...),
+    type: str = Form(...),
+    visible: bool = Form(True),
+    current_user: models.User = Depends(get_current_user),
+    db: Session = Depends(database.get_db)
+):
+    if not current_user.is_admin:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    config = db.query(models.AppConfig).filter(models.AppConfig.key == key).first()
+    if not config:
+        raise HTTPException(status_code=404, detail="Configuration not found")
+    
+    config.value = value
+    config.description = description
+    config.type = type
+    config.visible = visible
+    config.updated_at = datetime.utcnow()
+    
+    db.commit()
+    db.refresh(config)
+    return config
 
 
 @app.on_event("startup")

@@ -2,23 +2,25 @@ version: '3.8'
 
 services:
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      args:
-        - NODE_ENV=production
+    container_name: ld-app-frontend
+    image: ld-app-frontend
     ports:
-      - "8080:80"
+      - "80:80"  
+      - "443:443"
+    volumes:
+      - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - app-network
-    depends_on:
-      - web
+    # depends_on:
+    #   - backend
     restart: unless-stopped
 
-  web:
+  backend:
     build: .
+    image: ld-app-backend
     ports:
       - "8923:8000"
+      - "8443:443"
     volumes:
       - ./uploads:/app/uploads
     environment:

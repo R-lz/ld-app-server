@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import axios from 'axios'
+import { useRouter } from 'vue-router'
 
 export const useAuthStore = defineStore('auth', {
   state: () => ({
@@ -39,6 +40,8 @@ export const useAuthStore = defineStore('auth', {
       this.user = null
       localStorage.removeItem('token')
       delete axios.defaults.headers.common['Authorization']
+      const router = useRouter()
+      router.push('/login')
     },
 
     // 添加初始化方法
@@ -48,6 +51,19 @@ export const useAuthStore = defineStore('auth', {
         this.token = token
         axios.defaults.headers.common['Authorization'] = `Bearer ${token}`
       }
+    },
+
+    // 添加错误拦截器
+    setupAxiosInterceptors() {
+      axios.interceptors.response.use(
+        response => response,
+        error => {
+          if (error.response?.status === 401) {
+            this.logout()
+          }
+          return Promise.reject(error)
+        }
+      )
     }
   }
 }) 
